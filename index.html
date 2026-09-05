@@ -344,144 +344,152 @@ footer {
     <p>© 2026 Apex Transport. All Rights Reserved.</p>
 </footer>
 <script>
-const form = document.getElementById("contact-form");
 const calculateButton = document.getElementById("calculateFare");
 
 calculateButton.addEventListener("click", async function () {
 
-  const pickup = document.querySelector('[name="pickup"]').value.trim();
-  const delivery = document.querySelector('[name="delivery"]').value.trim();
-  const courier = document.getElementById("courier").value;
+    const pickup = document.querySelector('[name="pickup"]').value.trim();
+    const delivery = document.querySelector('[name="delivery"]').value.trim();
+    const courierSelect = document.getElementById("courier");
+    const courier = courierSelect.value;
 
-  if (!pickup || !delivery) {
-    alert("Please enter both the pickup and delivery locations.");
-    return;
-  }
-
-  if (!courier) {
-    alert("Please select a courier.");
-    return;
-  }
-
-  calculateButton.disabled = true;
-  calculateButton.textContent = "CALCULATING...";
-
-  try {
-
-    // Add Ghana to improve location accuracy
-    const pickupQuery = encodeURIComponent(pickup + ", Ghana");
-    const deliveryQuery = encodeURIComponent(delivery + ", Ghana");
-
-    // Find pickup coordinates
-    const pickupResponse = await fetch(
-      `https://photon.komoot.io/api/?q=${pickupQuery}&limit=1`
-    );
-
-    if (!pickupResponse.ok) {
-      throw new Error("Could not find pickup location.");
+    if (!pickup || !delivery) {
+        alert("Please enter both the pickup and delivery locations.");
+        return;
     }
 
-    const pickupData = await pickupResponse.json();
-
-    if (!pickupData.features || pickupData.features.length === 0) {
-      throw new Error("Pickup location could not be found.");
+    if (!courier) {
+        alert("Please select a courier.");
+        return;
     }
 
-    const pickupCoordinates =
-      pickupData.features[0].geometry.coordinates;
+    const selectedOption =
+        courierSelect.options[courierSelect.selectedIndex];
 
-    // Find delivery coordinates
-    const deliveryResponse = await fetch(
-      `https://photon.komoot.io/api/?q=${deliveryQuery}&limit=1`
-    );
+    const rate = Number(selectedOption.dataset.rate);
 
-    if (!deliveryResponse.ok) {
-      throw new Error("Could not find delivery location.");
+    calculateButton.disabled = true;
+    calculateButton.textContent = "CALCULATING...";
+
+    try {
+
+        /* FIND PICKUP LOCATION */
+        const pickupResponse = await fetch(
+            "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gh&q=" +
+            encodeURIComponent(pickup + ", Ghana")
+        );
+
+        if (!pickupResponse.ok) {
+            throw new Error("Pickup location search failed.");
+        }
+
+        const pickupData = await pickupResponse.json();
+
+        if (!pickupData.length) {
+            throw new Error("Pickup location not found.");
+        }
+
+        const pickupLat = Number(pickupData[0].lat);
+        const pickupLon = Number(pickupData[0].lon);
+
+
+        /* FIND DELIVERY LOCATION */
+        const deliveryResponse = await fetch(
+            "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gh&q=" +
+            encodeURIComponent(delivery + ", Ghana")
+        );
+
+        if (!deliveryResponse.ok) {
+            throw new Error("Delivery location search failed.");
+        }
+
+        const deliveryData = await deliveryResponse.json();
+
+        if (!deliveryData.length) {
+            throw new Error("Delivery location not found.");
+        }
+
+        const deliveryLat = Number(deliveryData[0].lat);
+        const deliveryLon = Number(deliveryData[0].lon);
+
+
+        /* CALCULATE DRIVING DISTANCE */
+        const routeUrl =
+            "https://router.project-osrm.org/route/v1/driving/" +
+            pickupLon + "," + pickupLat + ";" +
+            deliveryLon + "," + deliveryLat +
+            "?overview=false";
+
+        const routeResponse = await fetch(routeUrl);
+
+        if (!routeResponse.ok) {
+            throw new Error("Could not calculate driving distance.");
+        }
+
+        const routeData = await routeResponse.json();
+
+        if (
+            routeData.code !== "Ok" ||
+            !routeData.routes ||
+            routeData.routes.length === 0
+        ) {
+            throw new Error("No driving route found.");
+        }
+
+
+        /* DISTANCE */
+        const exactDistanceKm =
+            routeData.routes[0].distance / 1000;
+
+        const chargedDistanceKm =
+            Math.ceil(exactDistanceKm);
+
+
+        /* DELIVERY FEE */
+        const deliveryFee =
+            chargedDistanceKm * rate;
+
+
+        /* DISPLAY RESULT */
+        document.getElementById("courierDisplay").textContent =
+            courier;
+
+        document.getElementById("distanceDisplay").textContent =
+            chargedDistanceKm;
+
+        document.getElementById("feeDisplay").textContent =
+            deliveryFee.toFixed(2);
+
+
+        /* SAVE VALUES TO FORMSPREE */
+        document.getElementById("distance_km").value =
+            chargedDistanceKm;
+
+        document.getElementById("delivery_fee").value =
+            deliveryFee.toFixed(2);
+
+
+        /* SHOW RESULT */
+        document.getElementById("fareResult").style.display =
+            "block";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "We could not calculate the delivery fee. " +
+            "Please check that both locations are valid in Ghana and try again."
+        );
+
+    } finally {
+
+        calculateButton.disabled = false;
+
+        calculateButton.textContent =
+            "CALCULATE DELIVERY FEE";
     }
-
-    const deliveryData = await deliveryResponse.json();
-
-    if (!deliveryData.features || deliveryData.features.length === 0) {
-      throw new Error("Delivery location could not be found.");
-    }
-
-    const deliveryCoordinates =
-      deliveryData.features[0].geometry.coordinates;
-
-    // Coordinates are longitude,latitude
-    const pickupLon = pickupCoordinates[0];
-    const pickupLat = pickupCoordinates[1];
-
-    const deliveryLon = deliveryCoordinates[0];
-    const deliveryLat = deliveryCoordinates[1];
-
-    // Get driving distance from OSRM
-    const routeUrl =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${pickupLon},${pickupLat};${deliveryLon},${deliveryLat}` +
-      `?overview=false`;
-
-    const routeResponse = await fetch(routeUrl);
-
-    if (!routeResponse.ok) {
-      throw new Error("Could not calculate the driving distance.");
-    }
-
-    const routeData = await routeResponse.json();
-
-    if (
-      routeData.code !== "Ok" ||
-      !routeData.routes ||
-      routeData.routes.length === 0
-    ) {
-      throw new Error("No driving route could be found.");
-    }
-
-    // Exact road distance in kilometres
-    const exactDistanceKm =
-      routeData.routes[0].distance / 1000;
-
-    // Always round UP partial kilometres
-    const chargedDistanceKm = Math.ceil(exactDistanceKm);
-
-    // Apex Transport price: GHS 5 per charged kilometre
-    const deliveryFee = chargedDistanceKm * 5;
-
-    // Display result
-    document.getElementById("courierDisplay").textContent = courier;
-
-    document.getElementById("distanceDisplay").textContent =
-      chargedDistanceKm;
-
-    document.getElementById("feeDisplay").textContent =
-      deliveryFee.toFixed(2);
-
-    // Save values in the form
-    document.getElementById("distance_km").value =
-      chargedDistanceKm;
-
-    document.getElementById("delivery_fee").value =
-      deliveryFee.toFixed(2);
-
-    // Show fare result
-    document.getElementById("fareResult").style.display = "block";
-
-  } catch (error) {
-
-    console.error(error);
-
-    alert(
-      "We could not calculate the route. " +
-      "Please check the pickup and delivery locations and try again."
-    );
-
-  } finally {
-
-    calculateButton.disabled = false;
-    calculateButton.textContent = "CALCULATE DELIVERY FEE";
-
-  }
 
 });
-
-
+</script>

@@ -343,40 +343,46 @@ footer {
 <footer>
     <p>© 2026 Apex Transport. All Rights Reserved.</p>
 </footer>
-<script>
+    <script>
 const calculateButton = document.getElementById("calculateFare");
+
+const TOMTOM_API_KEY = "eQPilg3B8YgPjvJezRTBQAO66jNjKwl2";
 
 calculateButton.addEventListener("click", async function () {
 
     const pickup = document.querySelector('[name="pickup"]').value.trim();
     const delivery = document.querySelector('[name="delivery"]').value.trim();
     const courierSelect = document.getElementById("courier");
-    const courier = courierSelect.value;
 
     if (!pickup || !delivery) {
         alert("Please enter both the pickup and delivery locations.");
         return;
     }
 
-    if (!courier) {
+    if (!courierSelect.value) {
         alert("Please select a courier.");
         return;
     }
 
-    const selectedOption =
-        courierSelect.options[courierSelect.selectedIndex];
+    const courier =
+        courierSelect.options[courierSelect.selectedIndex].text;
 
-    const rate = Number(selectedOption.dataset.rate);
+    const rate =
+        Number(
+            courierSelect.options[
+                courierSelect.selectedIndex
+            ].dataset.rate
+        );
 
     calculateButton.disabled = true;
-    calculateButton.textContent = "CALCULATING...";
+    calculateButton.textContent = "CHECKING TRAFFIC...";
 
     try {
 
-        /* FIND PICKUP LOCATION */
         const pickupResponse = await fetch(
-            "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gh&q=" +
-            encodeURIComponent(pickup + ", Ghana")
+            "https://photon.komoot.io/api/?q=" +
+            encodeURIComponent(pickup + ", Ghana") +
+            "&limit=1"
         );
 
         if (!pickupResponse.ok) {
@@ -385,18 +391,23 @@ calculateButton.addEventListener("click", async function () {
 
         const pickupData = await pickupResponse.json();
 
-        if (!pickupData.length) {
+        if (
+            !pickupData.features ||
+            pickupData.features.length === 0
+        ) {
             throw new Error("Pickup location not found.");
         }
 
-        const pickupLat = Number(pickupData[0].lat);
-        const pickupLon = Number(pickupData[0].lon);
+        const pickupCoordinates =
+            pickupData.features[0].geometry.coordinates;
 
+        const pickupLon = pickupCoordinates[0];
+        const pickupLat = pickupCoordinates[1];
 
-        /* FIND DELIVERY LOCATION */
         const deliveryResponse = await fetch(
-            "https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gh&q=" +
-            encodeURIComponent(delivery + ", Ghana")
+            "https://photon.komoot.io/api/?q=" +
+            encodeURIComponent(delivery + ", Ghana") +
+            "&limit=1"
         );
 
         if (!deliveryResponse.ok) {
@@ -405,82 +416,178 @@ calculateButton.addEventListener("click", async function () {
 
         const deliveryData = await deliveryResponse.json();
 
-        if (!deliveryData.length) {
+        if (
+            !deliveryData.features ||
+            deliveryData.features.length === 0
+        ) {
             throw new Error("Delivery location not found.");
         }
 
-        const deliveryLat = Number(deliveryData[0].lat);
-        const deliveryLon = Number(deliveryData[0].lon);
+        const deliveryCoordinates =
+            deliveryData.features[0].geometry.coordinates;
 
+        const deliveryLon = deliveryCoordinates[0];
+        const deliveryLat = deliveryCoordinates[1];
 
-        /* CALCULATE DRIVING DISTANCE */
         const routeUrl =
-            "https://router.project-osrm.org/route/v1/driving/" +
-            pickupLon + "," + pickupLat + ";" +
-            deliveryLon + "," + deliveryLat +
-            "?overview=false";
+            "https://api.tomtom.com/routing/1/calculateRoute/" +
+            pickupLat + "," + pickupLon +
+            ":" +
+            deliveryLat + "," + deliveryLon +
+            "/json" +
+            "?traffic=true" +
+            "&computeTravelTimeFor=all" +
+            "&routeType=fastest" +
+            "&travelMode=car" +
+            "&key=" + encodeURIComponent(TOMTOM_API_KEY);
 
         const routeResponse = await fetch(routeUrl);
 
         if (!routeResponse.ok) {
-            throw new Error("Could not calculate driving distance.");
+
+            if (routeResponse.status === 403) {
+                throw new Error("TomTom API key was rejected.");
+            }
+
+            if (routeResponse.status === 429) {
+                throw new Error(
+                    "TomTom free request limit has been reached."
+                );
+            }
+
+            throw new Error("TomTom traffic service failed.");
         }
 
         const routeData = await routeResponse.json();
 
         if (
-            routeData.code !== "Ok" ||
             !routeData.routes ||
             routeData.routes.length === 0
         ) {
-            throw new Error("No driving route found.");
+            throw new Error("No driving route could be found.");
         }
 
+        const summary = routeData.routes[0].summary;
 
-        /* DISTANCE */
         const exactDistanceKm =
-            routeData.routes[0].distance / 1000;
+            summary.lengthInMeters / 1000;
 
         const chargedDistanceKm =
             Math.ceil(exactDistanceKm);
 
+        const trafficDelay =
+            Number(summary.trafficDelayInSeconds || 0);
 
-        /* DELIVERY FEE */
-        const deliveryFee =
+        const noTrafficTime =
+            Number(
+                summary.noTrafficTravelTimeInSeconds || 0
+            );
+
+        let trafficPercentage = 0;
+
+        if (noTrafficTime > 0) {
+            trafficPercentage =
+                (trafficDelay / noTrafficTime) * 100;
+        }
+
+        let trafficLevel;
+        let trafficMultiplier;
+
+        if (trafficPercentage < 10) {
+
+            trafficLevel = "Free Flow";
+            trafficMultiplier = 1.00;
+
+        } else if (trafficPercentage < 25) {
+
+            trafficLevel = "Light Traffic";
+            trafficMultiplier = 1.10;
+
+        } else if (trafficPercentage < 50) {
+
+            trafficLevel = "Moderate Traffic";
+            trafficMultiplier = 1.25;
+
+        } else if (trafficPercentage < 75) {
+
+            trafficLevel = "Heavy Traffic";
+            trafficMultiplier = 1.50;
+
+        } else {
+
+            trafficLevel = "Severe Traffic";
+            trafficMultiplier = 1.75;
+        }
+
+        const baseFee =
             chargedDistanceKm * rate;
 
+        const deliveryFee =
+            baseFee * trafficMultiplier;
 
-        /* DISPLAY RESULT */
-        document.getElementById("courierDisplay").textContent =
-            courier;
+        document.getElementById(
+            "courierDisplay"
+        ).textContent = courier;
 
-        document.getElementById("distanceDisplay").textContent =
-            chargedDistanceKm;
+        document.getElementById(
+            "distanceDisplay"
+        ).textContent =
+            chargedDistanceKm + " km";
 
-        document.getElementById("feeDisplay").textContent =
+        document.getElementById(
+            "feeDisplay"
+        ).textContent =
             deliveryFee.toFixed(2);
 
-
-        /* SAVE VALUES TO FORMSPREE */
-        document.getElementById("distance_km").value =
+        document.getElementById(
+            "distance_km"
+        ).value =
             chargedDistanceKm;
 
-        document.getElementById("delivery_fee").value =
+        document.getElementById(
+            "delivery_fee"
+        ).value =
             deliveryFee.toFixed(2);
 
+        let trafficInfo =
+            document.getElementById("trafficInfo");
 
-        /* SHOW RESULT */
-        document.getElementById("fareResult").style.display =
-            "block";
+        if (!trafficInfo) {
 
+            trafficInfo =
+                document.createElement("p");
+
+            trafficInfo.id = "trafficInfo";
+
+            document.getElementById(
+                "fareResult"
+            ).appendChild(trafficInfo);
+        }
+
+        trafficInfo.innerHTML =
+            "<strong>Traffic:</strong> " +
+            trafficLevel +
+            " (" +
+            Math.round(trafficPercentage) +
+            "% delay)" +
+            "<br>" +
+            "<strong>Traffic adjustment:</strong> " +
+            Math.round(
+                (trafficMultiplier - 1) * 100
+            ) +
+            "%";
+
+        document.getElementById(
+            "fareResult"
+        ).style.display = "block";
 
     } catch (error) {
 
         console.error(error);
 
         alert(
-            "We could not calculate the delivery fee. " +
-            "Please check that both locations are valid in Ghana and try again."
+            "We could not calculate the delivery fee.\n\n" +
+            error.message
         );
 
     } finally {

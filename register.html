@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Transport - Register</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #b71c1c;
+        }
+
+        #driverFields {
+            display: none;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Apex Transport</h1>
+
+    <p class="subtitle">Create your account</p>
+
+    <form id="registerForm">
+
+        <label for="role">I am registering as</label>
+
+        <select id="role" required>
+            <option value="">Select account type</option>
+            <option value="passenger">Passenger</option>
+            <option value="driver">Driver</option>
+        </select>
+
+        <label for="fullName">Full Name</label>
+
+        <input
+            type="text"
+            id="fullName"
+            placeholder="Enter your full name"
+            required
+        >
+
+        <label for="phone">Phone Number</label>
+
+        <input
+            type="tel"
+            id="phone"
+            placeholder="e.g. 0551234567"
+            required
+        >
+
+        <label for="email">Email Address</label>
+
+        <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            required
+        >
+
+        <label for="password">Password</label>
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Create a password"
+            minlength="6"
+            required
+        >
+
+        <div id="driverFields">
+
+            <label for="vehicleType">Vehicle Type</label>
+
+            <select id="vehicleType">
+                <option value="">Select vehicle type</option>
+                <option value="Motor">Motor</option>
+                <option value="Mini Pick-up">Mini Pick-up</option>
+                <option value="Big Pick-up">Big Pick-up</option>
+            </select>
+
+            <label for="vehicleRegistration">
+                Vehicle Registration
+            </label>
+
+            <input
+                type="text"
+                id="vehicleRegistration"
+                placeholder="Vehicle registration number"
+            >
+
+            <label for="driversLicense">
+                Driver's Licence Number
+            </label>
+
+            <input
+                type="text"
+                id="driversLicense"
+                placeholder="Driver's licence number"
+            >
+
+        </div>
+
+        <button type="submit" id="registerButton">
+            CREATE ACCOUNT
+        </button>
+
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <div class="login-link">
+        Already have an account?
+        <a href="login.html">Log in</a>
+    </div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+    "https://hwgwflubmptadxadooyo.supabase.co";
+
+/*
+ IMPORTANT:
+ Paste ONLY your Supabase PUBLISHABLE KEY below.
+
+ It normally starts with:
+ sb_publishable_
+
+ DO NOT use your sb_secret_ key here.
+*/
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_CazTNV2OzvBuZIiHH9tlxA_GrwIzeKY";
+
+const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+);
+
+
+const roleSelect =
+    document.getElementById("role");
+
+const driverFields =
+    document.getElementById("driverFields");
+
+
+roleSelect.addEventListener("change", function () {
+
+    if (this.value === "driver") {
+
+        driverFields.style.display = "block";
+
+        document.getElementById(
+            "vehicleType"
+        ).required = true;
+
+        document.getElementById(
+            "vehicleRegistration"
+        ).required = true;
+
+        document.getElementById(
+            "driversLicense"
+        ).required = true;
+
+    } else {
+
+        driverFields.style.display = "none";
+
+        document.getElementById(
+            "vehicleType"
+        ).required = false;
+
+        document.getElementById(
+            "vehicleRegistration"
+        ).required = false;
+
+        document.getElementById(
+            "driversLicense"
+        ).required = false;
+    }
+
+});
+
+
+document.getElementById(
+    "registerForm"
+).addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const registerButton =
+        document.getElementById("registerButton");
+
+    const message =
+        document.getElementById("message");
+
+    const role =
+        document.getElementById("role").value;
+
+    const fullName =
+        document.getElementById("fullName").value.trim();
+
+    const phone =
+        document.getElementById("phone").value.trim();
+
+    const email =
+        document.getElementById("email").value.trim();
+
+    const password =
+        document.getElementById("password").value;
+
+    const vehicleType =
+        document.getElementById("vehicleType").value;
+
+    const vehicleRegistration =
+        document.getElementById("vehicleRegistration").value.trim();
+
+    const driversLicense =
+        document.getElementById("driversLicense").value.trim();
+
+
+    message.style.display = "none";
+
+    registerButton.disabled = true;
+
+    registerButton.textContent =
+        "CREATING ACCOUNT...";
+
+
+    try {
+
+        const { data, error } =
+            await supabaseClient.auth.signUp({
+
+                email: email,
+
+                password: password,
+
+                options: {
+
+                    emailRedirectTo:
+                        "https://quuenshizzle.github.io/apextransport/",
+
+                    data: {
+
+                        full_name: fullName,
+
+                        phone: phone,
+
+                        role: role,
+
+                        vehicle_type:
+                            role === "driver"
+                                ? vehicleType
+                                : null,
+
+                        vehicle_registration:
+                            role === "driver"
+                                ? vehicleRegistration
+                                : null,
+
+                        drivers_license:
+                            role === "driver"
+                                ? driversLicense
+                                : null
+                    }
+                }
+            });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        message.className =
+            "message success";
+
+        message.style.display =
+            "block";
+
+        message.innerHTML =
+            "<strong>Account created!</strong><br><br>" +
+            "Please check your email and click the confirmation link " +
+            "to verify your Apex Transport account.";
+
+
+        document.getElementById(
+            "registerForm"
+        ).reset();
+
+        driverFields.style.display =
+            "none";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.className =
+            "message error";
+
+        message.style.display =
+            "block";
+
+        message.textContent =
+            error.message ||
+            "We could not create your account.";
+
+    } finally {
+
+        registerButton.disabled =
+            false;
+
+        registerButton.textContent =
+            "CREATE ACCOUNT";
+    }
+
+});
+
+</script>
+
+</body>
+</html>

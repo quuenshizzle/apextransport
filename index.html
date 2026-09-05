@@ -282,6 +282,25 @@ footer {
 
         <textarea name="message" rows="5"
         placeholder="Additional information"></textarea>
+        <label>Choose Courier</label>
+
+<select name="courier" id="courier" required>
+  <option value="">Select Courier</option>
+  <option value="Motor" data-rate="3">Motor — GHS 3/km</option>
+  <option value="Mini Pick-up" data-rate="5">Mini Pick-up — GHS 5/km</option>
+  <option value="Big Pick-up" data-rate="7">Big Pick-up — GHS 7/km</option>
+</select>
+
+<button type="button" id="calculateFare">CALCULATE DELIVERY FEE</button>
+
+<div id="fareResult" style="margin:15px 0; padding:15px; background:#f5f7fa; border-radius:8px; display:none;">
+  <p><strong>Courier:</strong> <span id="courierDisplay"></span></p>
+  <p><strong>Distance:</strong> <span id="distanceDisplay"></span> km</p>
+  <p><strong>Delivery Fee:</strong> GHS <span id="feeDisplay"></span></p>
+</div>
+
+<input type="hidden" name="distance_km" id="distance_km">
+<input type="hidden" name="delivery_fee" id="delivery_fee">
 <label>Payment Option</label>
 
 <select name="payment_option">
@@ -325,10 +344,122 @@ footer {
     <p>© 2026 Apex Transport. All Rights Reserved.</p>
 </footer>
 <script>
-const form = document.getElementById("contact-form");
 
+
+
+const form = document.getElementById("contact-form");
+const calculateButton = document.getElementById("calculateFare");
+
+calculateButton.addEventListener("click", async function() {
+
+  const pickup = document.querySelector('[name="pickup"]').value.trim();
+  const delivery = document.querySelector('[name="delivery"]').value.trim();
+  const courier = document.getElementById("courier").value;
+
+  if (!pickup || !delivery) {
+    alert("Please enter both pickup and delivery locations.");
+    return;
+  }
+
+  if (!courier) {
+    alert("Please select a courier.");
+    return;
+  }
+
+  const courierOption = document.querySelector(
+    '#courier option[value="' + courier + '"]'
+  );
+
+  const rate = Number(courierOption.dataset.rate);
+
+  calculateButton.textContent = "CALCULATING...";
+  calculateButton.disabled = true;
+
+  try {
+
+    const pickupResponse = await fetch(
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
+      encodeURIComponent(pickup)
+    );
+
+    const pickupData = await pickupResponse.json();
+
+    const deliveryResponse = await fetch(
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
+      encodeURIComponent(delivery)
+    );
+
+    const deliveryData = await deliveryResponse.json();
+
+    if (!pickupData.length || !deliveryData.length) {
+      alert("We could not find one of the locations. Please enter a more specific address or area.");
+      return;
+    }
+
+    const pickupLat = pickupData[0].lat;
+    const pickupLon = pickupData[0].lon;
+
+    const deliveryLat = deliveryData[0].lat;
+    const deliveryLon = deliveryData[0].lon;
+
+    const routeResponse = await fetch(
+      "https://router.project-osrm.org/route/v1/driving/" +
+      pickupLon + "," + pickupLat + ";" +
+      deliveryLon + "," + deliveryLat +
+      "?overview=false"
+    );
+
+    const routeData = await routeResponse.json();
+
+    if (!routeData.routes || !routeData.routes.length) {
+      alert("Unable to calculate the driving distance.");
+      return;
+    }
+
+    const exactDistance = routeData.routes[0].distance / 1000;
+
+    const chargedDistance = Math.ceil(exactDistance);
+
+    const deliveryFee = chargedDistance * rate;
+
+    document.getElementById("courierDisplay").textContent = courier;
+    document.getElementById("distanceDisplay").textContent = chargedDistance;
+    document.getElementById("feeDisplay").textContent =
+      deliveryFee.toFixed(2);
+
+    document.getElementById("distance_km").value = chargedDistance;
+    document.getElementById("delivery_fee").value =
+      deliveryFee.toFixed(2);
+
+    document.getElementById("fareResult").style.display = "block";
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("There was a problem calculating the delivery fee. Please try again.");
+
+  } finally {
+
+    calculateButton.textContent = "CALCULATE DELIVERY FEE";
+    calculateButton.disabled = false;
+
+  }
+
+});
+
+
+// Submit booking through Formspree
 form.addEventListener("submit", async function(event) {
+
   event.preventDefault();
+
+  const fee = document.getElementById("delivery_fee").value;
+
+  if (!fee) {
+    alert("Please calculate the delivery fee before submitting your booking.");
+    return;
+  }
 
   const response = await fetch(form.action, {
     method: "POST",
@@ -339,10 +470,16 @@ form.addEventListener("submit", async function(event) {
   });
 
   if (response.ok) {
-    window.location.href = "https://quuenshizzle.github.io/apextransport/thank-you.html";
+
+    window.location.href =
+      "https://quenshizzle.github.io/apextransport/thank-you.html";
+
   } else {
+
     alert("There was a problem submitting your request. Please try again.");
+
   }
+
 });
 </script>
 </body>

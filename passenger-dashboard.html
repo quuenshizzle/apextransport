@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Apex Transport - Passenger Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+        }
+
+        .header {
+            background: #111;
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0 0 8px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #111;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .logout {
+            background: white;
+            color: #111;
+            border: 1px solid #ccc;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #b71c1c;
+        }
+
+        .fare-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .fare {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .small {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .history-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>Apex Transport</h1>
+        <div id="welcome">
+            Loading your account...
+        </div>
+    </div>
+
+
+    <!-- BOOKING CARD -->
+
+    <div class="card">
+
+        <h2>Book a Pickup</h2>
+
+        <label for="pickup">
+            Pickup Location
+        </label>
+
+        <input
+            type="text"
+            id="pickup"
+            placeholder="Enter pickup location"
+            required
+        >
+
+        <label for="delivery">
+            Delivery Location
+        </label>
+
+        <input
+            type="text"
+            id="delivery"
+            placeholder="Enter delivery location"
+            required
+        >
+
+        <label for="courier">
+            Courier / Vehicle Type
+        </label>
+
+        <select id="courier">
+
+            <option value="">
+                Select vehicle
+            </option>
+
+            <option
+                value="Motor"
+                data-rate="3"
+            >
+                Motor — GHS 3/km
+            </option>
+
+            <option
+                value="Mini Pick-up"
+                data-rate="5"
+            >
+                Mini Pick-up — GHS 5/km
+            </option>
+
+            <option
+                value="Big Pick-up"
+                data-rate="7"
+            >
+                Big Pick-up — GHS 7/km
+            </option>
+
+        </select>
+
+
+        <button
+            type="button"
+            id="calculateFare"
+        >
+            CALCULATE DELIVERY FEE
+        </button>
+
+
+        <div
+            id="fareResult"
+            class="fare-box"
+        >
+
+            <div>
+                Vehicle:
+                <strong id="courierDisplay">-</strong>
+            </div>
+
+            <div>
+                Distance:
+                <strong id="distanceDisplay">-</strong>
+            </div>
+
+            <div>
+                Traffic:
+                <strong id="trafficDisplay">-</strong>
+            </div>
+
+            <div class="fare">
+                GHS <span id="feeDisplay">0.00</span>
+            </div>
+
+        </div>
+
+
+        <label for="payment">
+            Payment Method
+        </label>
+
+        <select id="payment">
+
+            <option value="">
+                Select payment method
+            </option>
+
+            <option value="Pay Later">
+                Pay Later
+            </option>
+
+            <option value="Pay Now">
+                Pay Now
+            </option>
+
+        </select>
+
+
+        <button
+            type="button"
+            id="requestPickup"
+        >
+            REQUEST PICKUP
+        </button>
+
+
+        <div
+            id="bookingMessage"
+            class="message"
+        ></div>
+
+    </div>
+
+
+    <!-- BOOKING HISTORY -->
+
+    <div class="card">
+
+        <h2>My Bookings</h2>
+
+        <div id="bookingHistory">
+            Loading bookings...
+        </div>
+
+    </div>
+
+
+    <button
+        type="button"
+        class="logout"
+        id="logoutButton"
+    >
+        LOG OUT
+    </button>
+
+</div>
+
+
+<script>
+
+/* ================================
+   SUPABASE
+================================ */
+
+const SUPABASE_URL =
+    "https://hwgwflubmptadxadooyo.supabase.co";
+
+
+/*
+ IMPORTANT:
+
+ Use the SAME Supabase PUBLISHABLE KEY
+ that you already used in register.html
+ and login.html.
+
+ DO NOT use the sb_secret_ key.
+*/
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_CazTNV2OzvBuZIiHH9tlxA_GrwIzeKY";
+
+
+const supabaseClient =
+    supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* ================================
+   TOMTOM
+================================ */
+
+const TOMTOM_API_KEY =
+    "eQPilg3B8YgPjvJezRTBQAO66jNjKwl2";
+
+
+/* ================================
+   ELEMENTS
+================================ */
+
+const welcome =
+    document.getElementById("welcome");
+
+const bookingMessage =
+    document.getElementById("bookingMessage");
+
+const fareResult =
+    document.getElementById("fareResult");
+
+const courierDisplay =
+    document.getElementById("courierDisplay");
+
+const distanceDisplay =
+    document.getElementById("distanceDisplay");
+
+const trafficDisplay =
+    document.getElementById("trafficDisplay");
+
+const feeDisplay =
+    document.getElementById("feeDisplay");
+
+const bookingHistory =
+    document.getElementById("bookingHistory");
+
+
+let currentUser = null;
+
+let calculatedFee = null;
+
+let calculatedDistance = null;
+
+let calculatedCourier = null;
+
+
+/* ================================
+   MESSAGE
+================================ */
+
+function showMessage(
+    element,
+    text,
+    type
+) {
+
+    element.className =
+        "message " + type;
+
+    element.textContent =
+        text;
+
+    element.style.display =
+        "block";
+}
+
+
+/* ================================
+   CHECK LOGIN
+================================ */
+
+async function loadUser() {
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient.auth
+        .getUser();
+
+
+    if (
+        error ||
+        !data.user
+    ) {
+
+        window.location.href =
+            "login.html";
+
+        return;
+    }
+
+
+    currentUser =
+        data.user;
+
+
+    const {
+        data: profile,
+        error: profileError
+    } =
+        await supabaseClient
+        .from("profiles")
+        .select(
+            "full_name, role"
+        )
+        .eq(
+            "id",
+            currentUser.id
+        )
+        .single();
+
+
+    if (
+        profileError ||
+        !profile
+    ) {
+
+        showMessage(
+            bookingMessage,
+            "Your profile could not be loaded.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    /*
+     * This page is only for passengers.
+     */
+
+    if (
+        profile.role !== "passenger"
+    ) {
+
+        window.location.href =
+            "driver-dashboard.html";
+
+        return;
+    }
+
+
+    welcome.textContent =
+        "Welcome, " +
+        profile.full_name +
+        "!";
+
+
+    loadBookings();
+
+}
+
+
+/* ================================
+   GEOCODING
+================================ */
+
+async function geocode(
+    address
+) {
+
+    const url =
+        "https://photon.komoot.io/api/" +
+        "?q=" +
+        encodeURIComponent(address) +
+        "&limit=1";
+
+
+    const response =
+        await fetch(url);
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Unable to find location."
+        );
+
+    }
+
+
+    const data =
+        await response.json();
+
+
+    if (
+        !data.features ||
+        !data.features.length
+    ) {
+
+        throw new Error(
+            "Location not found: " +
+            address
+        );
+
+    }
+
+
+    const coordinates =
+        data.features[0]
+        .geometry
+        .coordinates;
+
+
+    return {
+
+        lon: coordinates[0],
+
+        lat: coordinates[1]
+
+    };
+
+}
+
+
+/* ================================
+   CALCULATE FARE
+================================ */
+
+document.getElementById(
+    "calculateFare"
+).addEventListener(
+    "click",
+    async function() {
+
+        const pickup =
+            document.getElementById(
+                "pickup"
+            ).value.trim();
+
+
+        const delivery =
+            document.getElementById(
+                "delivery"
+            ).value.trim();
+
+
+        const courier =
+            document.getElementById(
+                "courier"
+            );
+
+
+        const selectedOption =
+            courier.options[
+                courier.selectedIndex
+            ];
+
+
+        if (
+            !pickup ||
+            !delivery ||
+            !courier.value
+        ) {
+
+            showMessage(
+                bookingMessage,
+                "Please enter pickup, delivery and vehicle type.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        const rate =
+            Number(
+                selectedOption
+                .dataset
+                .rate
+            );
+
+
+        this.disabled =
+            true;
+
+        this.textContent =
+            "CALCULATING...";
+
+
+        bookingMessage.style.display =
+            "none";
+
+
+        fareResult.style.display =
+            "none";
+
+
+        try {
+
+            const pickupLocation =
+                await geocode(pickup);
+
+
+            const deliveryLocation =
+                await geocode(delivery);
+
+
+            const routeUrl =
+
+                "https://api.tomtom.com/routing/1/calculateRoute/" +
+
+                pickupLocation.lat +
+                "," +
+                pickupLocation.lon +
+
+                ":" +
+
+                deliveryLocation.lat +
+                "," +
+                deliveryLocation.lon +
+
+                "/json" +
+
+                "?traffic=true" +
+
+                "&computeTravelTimeFor=all" +
+
+                "&routeType=fastest" +
+
+                "&travelMode=car" +
+
+                "&key=" +
+
+                encodeURIComponent(
+                    TOMTOM_API_KEY
+                );
+
+
+            const response =
+                await fetch(
+                    routeUrl
+                );
+
+
+            if (!response.ok) {
+
+                if (
+                    response.status === 403
+                ) {
+
+                    throw new Error(
+                        "TomTom rejected the request. Please check your API key and allowed domain."
+                    );
+
+                }
+
+
+                if (
+                    response.status === 429
+                ) {
+
+                    throw new Error(
+                        "The route service is temporarily busy. Please try again."
+                    );
+
+                }
+
+
+                throw new Error(
+                    "Unable to calculate route."
+                );
+
+            }
+
+
+            const route =
+                await response.json();
+
+
+            if (
+                !route.routes ||
+                !route.routes.length
+            ) {
+
+                throw new Error(
+                    "No route could be found."
+                );
+
+            }
+
+
+            const summary =
+                route.routes[0]
+                .summary;
+
+
+            const distanceKm =
+                Math.ceil(
+                    summary.lengthInMeters /
+                    1000
+                );
+
+
+            const trafficSeconds =
+                summary.travelTimeInSeconds;
+
+
+            const freeFlowSeconds =
+                summary.noTrafficTravelTimeInSeconds;
+
+
+            let trafficPercent = 0;
+
+
+            if (
+                freeFlowSeconds > 0
+            ) {
+
+                trafficPercent =
+                    (
+                        (
+                            trafficSeconds -
+                            freeFlowSeconds
+                        ) /
+                        freeFlowSeconds
+                    ) *
+                    100;
+
+            }
+
+
+            let multiplier = 1;
+
+            let trafficLabel =
+                "Free Flow";
+
+
+            if (
+                trafficPercent < 10
+            ) {
+
+                multiplier = 1;
+                trafficLabel =
+                    "Free Flow";
+
+            } else if (
+                trafficPercent < 25
+            ) {
+
+                multiplier = 1.10;
+                trafficLabel =
+                    "Light Traffic";
+
+            } else if (
+                trafficPercent < 50
+            ) {
+
+                multiplier = 1.25;
+                trafficLabel =
+                    "Moderate Traffic";
+
+            } else if (
+                trafficPercent < 75
+            ) {
+
+                multiplier = 1.50;
+                trafficLabel =
+                    "Heavy Traffic";
+
+            } else {
+
+                multiplier = 1.75;
+                trafficLabel =
+                    "Severe Traffic";
+
+            }
+
+
+            const baseFee =
+                distanceKm *
+                rate;
+
+
+            const finalFee =
+                Math.ceil(
+                    baseFee *
+                    multiplier
+                );
+
+
+            calculatedFee =
+                finalFee;
+
+            calculatedDistance =
+                distanceKm;
+
+            calculatedCourier =
+                courier.value;
+
+
+            courierDisplay.textContent =
+                courier.value;
+
+
+            distanceDisplay.textContent =
+                distanceKm +
+                " km";
+
+
+            trafficDisplay.textContent =
+                trafficLabel +
+                " (" +
+                Math.round(
+                    trafficPercent
+                ) +
+                "% slower)";
+
+
+            feeDisplay.textContent =
+                finalFee.toFixed(2);
+
+
+            fareResult.style.display =
+                "block";
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            showMessage(
+                bookingMessage,
+                error.message ||
+                "Unable to calculate delivery fee.",
+                "error"
+            );
+
+        } finally {
+
+            this.disabled =
+                false;
+
+            this.textContent =
+                "CALCULATE DELIVERY FEE";
+        }
+
+    }
+);
+
+
+/* ================================
+   REQUEST PICKUP
+================================ */
+
+document.getElementById(
+    "requestPickup"
+).addEventListener(
+    "click",
+    async function() {
+
+        const pickup =
+            document.getElementById(
+                "pickup"
+            ).value.trim();
+
+
+        const delivery =
+            document.getElementById(
+                "delivery"
+            ).value.trim();
+
+
+        const payment =
+            document.getElementById(
+                "payment"
+            ).value;
+
+
+        if (
+            !pickup ||
+            !delivery
+        ) {
+
+            showMessage(
+                bookingMessage,
+                "Please enter pickup and delivery locations.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (!calculatedFee) {
+
+            showMessage(
+                bookingMessage,
+                "Please calculate the delivery fee first.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        if (!payment) {
+
+            showMessage(
+                bookingMessage,
+                "Please select a payment method.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        this.disabled =
+            true;
+
+        this.textContent =
+            "SUBMITTING...";
+
+
+        try {
+
+            /*
+             * This expects a bookings table.
+             */
+
+            const {
+                error
+            } =
+                await supabaseClient
+                .from("bookings")
+                .insert({
+
+                    passenger_id:
+                        currentUser.id,
+
+                    pickup_location:
+                        pickup,
+
+                    delivery_location:
+                        delivery,
+
+                    courier_type:
+                        calculatedCourier,
+
+                    distance_km:
+                        calculatedDistance,
+
+                    delivery_fee:
+                        calculatedFee,
+
+                    payment_method:
+                        payment,
+
+                    status:
+                        "pending"
+                });
+
+
+            if (error) {
+                throw error;
+            }
+
+
+            showMessage(
+                bookingMessage,
+                "Pickup request submitted successfully!",
+                "success"
+            );
+
+
+            document.getElementById(
+                "pickup"
+            ).value = "";
+
+
+            document.getElementById(
+                "delivery"
+            ).value = "";
+
+
+            document.getElementById(
+                "courier"
+            ).value = "";
+
+
+            document.getElementById(
+                "payment"
+            ).value = "";
+
+
+            fareResult.style.display =
+                "none";
+
+
+            calculatedFee =
+                null;
+
+            calculatedDistance =
+                null;
+
+            calculatedCourier =
+                null;
+
+
+            loadBookings();
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            showMessage(
+                bookingMessage,
+                error.message ||
+                "Unable to submit pickup request.",
+                "error"
+            );
+
+        } finally {
+
+            this.disabled =
+                false;
+
+            this.textContent =
+                "REQUEST PICKUP";
+        }
+
+    }
+);
+
+
+/* ================================
+   LOAD BOOKINGS
+================================ */
+
+async function loadBookings() {
+
+    if (!currentUser) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+        .from("bookings")
+        .select("*")
+        .eq(
+            "passenger_id",
+            currentUser.id
+        )
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+       if (error) {
+      console.error(error);
+      bookingHistory.innerHTML =
+        "<p style='color:#b71c1c;'>Could not load booking history.</p>";
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      bookingHistory.innerHTML =
+        "<p>No bookings yet.</p>";
+      return;
+    }
+
+    bookingHistory.innerHTML = data.map(booking => `
+      <div class="booking-card">
+        <strong>${escapeHtml(booking.courier_type || "Delivery")}</strong>
+        <p><strong>Pickup:</strong> ${escapeHtml(booking.pickup_location || "")}</p>
+        <p><strong>Delivery:</strong> ${escapeHtml(booking.delivery_location || "")}</p>
+        <p><strong>Status:</strong> ${escapeHtml(booking.status || "pending")}</p>
+        <p><strong>Fee:</strong> GHS ${Number(booking.delivery_fee || 0).toFixed(2)}</p>
+        <p><small>${booking.created_at ? new Date(booking.created_at).toLocaleString() : ""}</small></p>
+      </div>
+    `).join("");
+  }
+
+  loadBookingHistory();
+  );
+
+
+   

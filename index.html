@@ -344,20 +344,17 @@ footer {
     <p>© 2026 Apex Transport. All Rights Reserved.</p>
 </footer>
 <script>
-
-
-
 const form = document.getElementById("contact-form");
 const calculateButton = document.getElementById("calculateFare");
 
-calculateButton.addEventListener("click", async function() {
+calculateButton.addEventListener("click", async function () {
 
   const pickup = document.querySelector('[name="pickup"]').value.trim();
   const delivery = document.querySelector('[name="delivery"]').value.trim();
   const courier = document.getElementById("courier").value;
 
   if (!pickup || !delivery) {
-    alert("Please enter both pickup and delivery locations.");
+    alert("Please enter both the pickup and delivery locations.");
     return;
   }
 
@@ -366,122 +363,125 @@ calculateButton.addEventListener("click", async function() {
     return;
   }
 
-  const courierOption = document.querySelector(
-    '#courier option[value="' + courier + '"]'
-  );
-
-  const rate = Number(courierOption.dataset.rate);
-
-  calculateButton.textContent = "CALCULATING...";
   calculateButton.disabled = true;
+  calculateButton.textContent = "CALCULATING...";
 
   try {
 
+    // Add Ghana to improve location accuracy
+    const pickupQuery = encodeURIComponent(pickup + ", Ghana");
+    const deliveryQuery = encodeURIComponent(delivery + ", Ghana");
+
+    // Find pickup coordinates
     const pickupResponse = await fetch(
-      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
-      encodeURIComponent(pickup)
+      `https://photon.komoot.io/api/?q=${pickupQuery}&limit=1`
     );
+
+    if (!pickupResponse.ok) {
+      throw new Error("Could not find pickup location.");
+    }
 
     const pickupData = await pickupResponse.json();
 
+    if (!pickupData.features || pickupData.features.length === 0) {
+      throw new Error("Pickup location could not be found.");
+    }
+
+    const pickupCoordinates =
+      pickupData.features[0].geometry.coordinates;
+
+    // Find delivery coordinates
     const deliveryResponse = await fetch(
-      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
-      encodeURIComponent(delivery)
+      `https://photon.komoot.io/api/?q=${deliveryQuery}&limit=1`
     );
+
+    if (!deliveryResponse.ok) {
+      throw new Error("Could not find delivery location.");
+    }
 
     const deliveryData = await deliveryResponse.json();
 
-    if (!pickupData.length || !deliveryData.length) {
-      alert("We could not find one of the locations. Please enter a more specific address or area.");
-      return;
+    if (!deliveryData.features || deliveryData.features.length === 0) {
+      throw new Error("Delivery location could not be found.");
     }
 
-    const pickupLat = pickupData[0].lat;
-    const pickupLon = pickupData[0].lon;
+    const deliveryCoordinates =
+      deliveryData.features[0].geometry.coordinates;
 
-    const deliveryLat = deliveryData[0].lat;
-    const deliveryLon = deliveryData[0].lon;
+    // Coordinates are longitude,latitude
+    const pickupLon = pickupCoordinates[0];
+    const pickupLat = pickupCoordinates[1];
 
-    const routeResponse = await fetch(
-      "https://router.project-osrm.org/route/v1/driving/" +
-      pickupLon + "," + pickupLat + ";" +
-      deliveryLon + "," + deliveryLat +
-      "?overview=false"
-    );
+    const deliveryLon = deliveryCoordinates[0];
+    const deliveryLat = deliveryCoordinates[1];
+
+    // Get driving distance from OSRM
+    const routeUrl =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${pickupLon},${pickupLat};${deliveryLon},${deliveryLat}` +
+      `?overview=false`;
+
+    const routeResponse = await fetch(routeUrl);
+
+    if (!routeResponse.ok) {
+      throw new Error("Could not calculate the driving distance.");
+    }
 
     const routeData = await routeResponse.json();
 
-    if (!routeData.routes || !routeData.routes.length) {
-      alert("Unable to calculate the driving distance.");
-      return;
+    if (
+      routeData.code !== "Ok" ||
+      !routeData.routes ||
+      routeData.routes.length === 0
+    ) {
+      throw new Error("No driving route could be found.");
     }
 
-    const exactDistance = routeData.routes[0].distance / 1000;
+    // Exact road distance in kilometres
+    const exactDistanceKm =
+      routeData.routes[0].distance / 1000;
 
-    const chargedDistance = Math.ceil(exactDistance);
+    // Always round UP partial kilometres
+    const chargedDistanceKm = Math.ceil(exactDistanceKm);
 
-    const deliveryFee = chargedDistance * rate;
+    // Apex Transport price: GHS 5 per charged kilometre
+    const deliveryFee = chargedDistanceKm * 5;
 
+    // Display result
     document.getElementById("courierDisplay").textContent = courier;
-    document.getElementById("distanceDisplay").textContent = chargedDistance;
+
+    document.getElementById("distanceDisplay").textContent =
+      chargedDistanceKm;
+
     document.getElementById("feeDisplay").textContent =
       deliveryFee.toFixed(2);
 
-    document.getElementById("distance_km").value = chargedDistance;
+    // Save values in the form
+    document.getElementById("distance_km").value =
+      chargedDistanceKm;
+
     document.getElementById("delivery_fee").value =
       deliveryFee.toFixed(2);
 
+    // Show fare result
     document.getElementById("fareResult").style.display = "block";
 
   } catch (error) {
 
     console.error(error);
 
-    alert("There was a problem calculating the delivery fee. Please try again.");
+    alert(
+      "We could not calculate the route. " +
+      "Please check the pickup and delivery locations and try again."
+    );
 
   } finally {
 
-    calculateButton.textContent = "CALCULATE DELIVERY FEE";
     calculateButton.disabled = false;
+    calculateButton.textContent = "CALCULATE DELIVERY FEE";
 
   }
 
 });
 
-
-// Submit booking through Formspree
-form.addEventListener("submit", async function(event) {
-
-  event.preventDefault();
-
-  const fee = document.getElementById("delivery_fee").value;
-
-  if (!fee) {
-    alert("Please calculate the delivery fee before submitting your booking.");
-    return;
-  }
-
-  const response = await fetch(form.action, {
-    method: "POST",
-    body: new FormData(form),
-    headers: {
-      "Accept": "application/json"
-    }
-  });
-
-  if (response.ok) {
-
-    window.location.href =
-      "https://quenshizzle.github.io/apextransport/thank-you.html";
-
-  } else {
-
-    alert("There was a problem submitting your request. Please try again.");
-
-  }
-
-});
-</script>
-</body>
-</html>
 

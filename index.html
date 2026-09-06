@@ -563,7 +563,7 @@ if (currentHour >= 5 && currentHour < 7) {
             "<strong>Traffic:</strong> " +
             trafficLevel +
             " (" +
-            Math.round(trafficPercentage) +
+            Math.round((trafficMultiplier - 1) * 100) +
             "% delay)" +
             "<br>" +
             "<strong>Traffic adjustment:</strong> " +

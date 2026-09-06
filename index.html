@@ -286,9 +286,9 @@ footer {
 
 <select name="courier" id="courier" required>
   <option value="">Select Courier</option>
-  <option value="Motor" data-rate="3">Motor — GHS 3/km</option>
-  <option value="Mini Pick-up" data-rate="5">Mini Pick-up — GHS 5/km</option>
-  <option value="Big Pick-up" data-rate="7">Big Pick-up — GHS 7/km</option>
+  <option value="Motor" data-rate="3">Motor — GHS 4/km</option>
+  <option value="Mini Pick-up" data-rate="5">Mini Pick-up — GHS 6/km</option>
+  <option value="Big Pick-up" data-rate="7">Big Pick-up — GHS 8/km</option>
 </select>
 
 <button type="button" id="calculateFare">CALCULATE DELIVERY FEE</button>
@@ -621,6 +621,7 @@ const supabaseClient = window.supabase.createClient(
   const pickup = form.querySelector('[name="pickup"]').value;
   const delivery = form.querySelector('[name="delivery"]').value;
   const packageType = form.querySelector('[name="package"]').value;
+  const courierType = form.querySelector('[name="courier"]').value;
   const date = form.querySelector('[name="date"]').value;
   const message = form.querySelector('[name="message"]').value;
   const distance = form.querySelector('[name="distance_km"]').value;
@@ -641,6 +642,7 @@ const supabaseClient = window.supabase.createClient(
         pickup_location: pickup,
         delivery_location: delivery,
         package_type: packageType,
+        courier_type: courierType,
         pickup_date: date,
         message: message,
         distance_km: distance || 0,

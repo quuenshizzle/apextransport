@@ -259,7 +259,7 @@ footer {
         <p>Tell us where to collect and where to deliver.</p>
     </div>
 
-    <form id="contact-form" class="form" action="https://formspree.io/f/mgaezqjq" method="post"> 
+    <form id="booking-form" class="form"> 
 <input type="hidden" name="_next" value="https://quuenshizzle.github.io/apextransport/thank-you.html">
         <input type="text" name="name" placeholder="Your Full Name" required>
 
@@ -611,4 +611,53 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY
 );
+    document.getElementById("booking-form").addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  const form = event.target;
+
+  const name = form.querySelector('[name="name"]').value;
+  const phone = form.querySelector('[name="phone"]').value;
+  const pickup = form.querySelector('[name="pickup"]').value;
+  const delivery = form.querySelector('[name="delivery"]').value;
+  const packageType = form.querySelector('[name="package"]').value;
+  const date = form.querySelector('[name="date"]').value;
+  const message = form.querySelector('[name="message"]').value;
+  const distance = form.querySelector('[name="distance_km"]').value;
+  const deliveryFee = form.querySelector('[name="delivery_fee"]').value;
+  const paymentMethod = form.querySelector('[name="payment_method"]').value;
+
+  const submitButton = form.querySelector('button[type="submit"]');
+
+  submitButton.disabled = true;
+  submitButton.textContent = "SENDING...";
+
+  const { error } = await supabaseClient
+    .from("bookings")
+    .insert([
+      {
+        name: name,
+        phone: phone,
+        pickup_location: pickup,
+        delivery_location: delivery,
+        package_type: packageType,
+        pickup_date: date,
+        message: message,
+        distance_km: distance || 0,
+        delivery_fee: deliveryFee || 0,
+        payment_method: paymentMethod,
+        status: "Pending"
+      }
+    ]);
+
+  if (error) {
+    console.error(error);
+    alert("Booking failed: " + error.message);
+
+    submitButton.disabled = false;
+    submitButton.textContent = "REQUEST PICKUP";
+  } else {
+    window.location.href = "thank-you.html";
+  }
+});
 </script>

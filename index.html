@@ -661,7 +661,39 @@ const supabaseClient = window.supabase.createClient(
     submitButton.disabled = false;
     submitButton.textContent = "REQUEST PICKUP";
   } else {
-    window.location.href = "thank-you.html";
-  }
-});
-</script>
+
+    const handler = PaystackPop.setup({
+        key: 'pk_test_dc9fc0dc7884a09440e1a058ac93682',
+
+        email: email,
+
+        amount: Math.round(deliveryFee * 100),
+
+        currency: 'GHS',
+
+        ref: 'APEX-' + Date.now(),
+
+        callback: function(response) {
+
+            alert("Payment successful! Reference: " + response.reference);
+
+            window.location.href = "thank-you.html";
+
+        },
+
+        onClose: function() {
+
+            alert("Payment window closed. Your booking was received but payment was not completed.");
+
+            window.location.href = "thank-you.html";
+
+        }
+
+    });
+
+    handler.openIframe();
+
+}
+    </script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+

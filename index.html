@@ -564,11 +564,15 @@ const courierShare = deliveryFee * 0.70;
             "delivery_fee"
         ).value =
             deliveryFee.toFixed(2);
-        document.getElementById("apexShareDisplay").textContent =
-    apexShare.toFixed(2);
+        const apexShareDisplay = document.getElementById("apexShareDisplay");
+if (apexShareDisplay) {
+    apexShareDisplay.textContent = apexShare.toFixed(2);
+}
 
-document.getElementById("courierShareDisplay").textContent =
-    courierShare.toFixed(2);
+const courierShareDisplay = document.getElementById("courierShareDisplay");
+if (courierShareDisplay) {
+    courierShareDisplay.textContent = courierShare.toFixed(2);
+}
         let trafficInfo =
             document.getElementById("trafficInfo");
 

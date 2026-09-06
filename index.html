@@ -297,6 +297,10 @@ footer {
   <p><strong>Courier:</strong> <span id="courierDisplay"></span></p>
   <p><strong>Distance:</strong> <span id="distanceDisplay"></span> km</p>
   <p><strong>Delivery Fee:</strong> GHS <span id="feeDisplay"></span></p>
+
+    <p><strong>Apex Transport Share (30%):</strong> GHS <span id="apexShareDisplay"></span></p>
+
+<p><strong>Courier Share (70%):</strong> GHS <span id="courierShareDisplay"></span></p>
 </div>
 
 <input type="hidden" name="distance_km" id="distance_km">
@@ -519,7 +523,8 @@ if (currentHour >= 5 && currentHour < 7) {
 
         const deliveryFee =
             baseFee * trafficMultiplier;
-
+        const apexShare = deliveryFee * 0.30;
+const courierShare = deliveryFee * 0.70;
         document.getElementById(
             "courierDisplay"
         ).textContent = courier;
@@ -543,7 +548,11 @@ if (currentHour >= 5 && currentHour < 7) {
             "delivery_fee"
         ).value =
             deliveryFee.toFixed(2);
+        document.getElementById("apexShareDisplay").textContent =
+    apexShare.toFixed(2);
 
+document.getElementById("courierShareDisplay").textContent =
+    courierShare.toFixed(2);
         let trafficInfo =
             document.getElementById("trafficInfo");
 

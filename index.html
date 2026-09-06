@@ -483,42 +483,37 @@ calculateButton.addEventListener("click", async function () {
                 summary.noTrafficTravelTimeInSeconds || 0
             );
 
-        let trafficPercentage = 0;
-
-        if (noTrafficTime > 0) {
-            trafficPercentage =
-                (trafficDelay / noTrafficTime) * 100;
-        }
-
         let trafficLevel;
-        let trafficMultiplier;
+let trafficMultiplier;
 
-        if (trafficPercentage < 10) {
+// Get the current hour
+const currentHour = new Date().getHours();
 
-            trafficLevel = "Free Flow";
-            trafficMultiplier = 1.00;
+// Automatically determine traffic based on time
+if (currentHour >= 5 && currentHour < 7) {
+    trafficLevel = "Free Flow";
+    trafficMultiplier = 1.00;
 
-        } else if (trafficPercentage < 25) {
+} else if (currentHour >= 7 && currentHour < 10) {
+    trafficLevel = "Heavy Traffic";
+    trafficMultiplier = 1.20;
 
-            trafficLevel = "Light Traffic";
-            trafficMultiplier = 1.10;
+} else if (currentHour >= 10 && currentHour < 16) {
+    trafficLevel = "Moderate Traffic";
+    trafficMultiplier = 1.10;
 
-        } else if (trafficPercentage < 50) {
+} else if (currentHour >= 16 && currentHour < 20) {
+    trafficLevel = "Heavy Traffic";
+    trafficMultiplier = 1.20;
 
-            trafficLevel = "Moderate Traffic";
-            trafficMultiplier = 1.25;
+} else if (currentHour >= 20 && currentHour < 23) {
+    trafficLevel = "Light Traffic";
+    trafficMultiplier = 1.05;
 
-        } else if (trafficPercentage < 75) {
-
-            trafficLevel = "Heavy Traffic";
-            trafficMultiplier = 1.50;
-
-        } else {
-
-            trafficLevel = "Severe Traffic";
-            trafficMultiplier = 1.75;
-        }
-
+} else {
+    trafficLevel = "Free Flow";
+    trafficMultiplier = 1.00;
+}
         const baseFee =
             chargedDistanceKm * rate;
 

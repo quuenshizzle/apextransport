@@ -294,11 +294,29 @@ footer {
 <button type="button" id="calculateFare">CALCULATE DELIVERY FEE</button>
 
 <div id="fareResult" style="margin:15px 0; padding:15px; background:#f5f7fa; border-radius:8px; display:none;">
-  <p><strong>Courier:</strong> <span id="courierDisplay"></span></p>
-  <p><strong>Distance:</strong> <span id="distanceDisplay"></span> km</p>
-  <p><strong>Delivery Fee:</strong> GHS <span id="feeDisplay"></span></p>
+    
+    <p><strong>Courier:</strong> <span id="courierDisplay"></span></p>
+    
+    <p><strong>Distance:</strong> 
+        <span id="distanceDisplay"></span> km
+    </p>
+    
+    <p><strong>Delivery Fee:</strong> 
+        GHS <span id="feeDisplay"></span>
+    </p>
 
-   
+    <p><strong>Apex Transport Share:</strong> 
+        GHS <span id="apexShareDisplay"></span>
+    </p>
+
+    <p><strong>Courier Share:</strong> 
+        GHS <span id="courierShareDisplay"></span>
+    </p>
+
+    <p><strong>Traffic:</strong> 
+        <span id="trafficInfo"></span>
+    </p>
+
 </div>
 
 <input type="hidden" name="distance_km" id="distance_km">

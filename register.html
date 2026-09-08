@@ -366,9 +366,16 @@ document.getElementById(
             "block";
 
         message.innerHTML =
-            message.innerHTML =
     "<strong>Account created successfully!</strong><br><br>" +
-    "Your Apex Transport account is ready. You can now log in.";
+    "Taking you to your Apex Transport dashboard...";
+
+// Remember this customer on this phone/browser
+localStorage.setItem("apexTransportRegistered", "true");
+
+// Go to the passenger dashboard
+setTimeout(function () {
+    window.location.href = "passenger-dashboard.html";
+}, 1500);
 
         document.getElementById(
             "registerForm"
